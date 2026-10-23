@@ -886,10 +886,10 @@
 
   var saverOn = false, idleAt = Date.now(), saverIndex = 0, saverTimer = 0, SAVER_AFTER = 5 * 60000;
 
-  // MARK: - The screensaver kitten: chases the floating clock, then hides and peeks in from the edges of the screen
+  // MARK: - The screensaver kitten: tries every way to catch the bouncing clock, then hides and peeks in from the edges
 
   var palTimer = 0, saverRaf = 0, palStep = null;
-  var motion = {x: 0, y: 0, w: 500, h: 220, vx: 130, vy: 96};
+  var motion = {x: 0, y: 0, w: 500, h: 200, vx: 130, vy: 96};
   var PAL_W = 180, PAL_H = 150;
   // A blocky orange kitten in the style of Claude's mascot: square body, two upright eyes, stubby arms and legs.
   var PAL_SVG = '<svg viewBox="0 0 120 100" width="' + PAL_W + '" height="' + PAL_H + '">' +
@@ -905,15 +905,17 @@
     '<rect x="86" y="54" width="16" height="2"/><rect x="86" y="60" width="16" height="2"/></g></svg>';
 
   function startPal(saver) {
+    var rope = el('div', 'rope', saver);
     var wrap = el('div', 'pal', saver), rot = el('div', 'rot', wrap), inner = el('div', 'in', rot);
     inner.innerHTML = PAL_SVG;
     var eyes = inner.querySelector('.eyes'), svg = inner.querySelector('svg');
-    var chasing = false, px = 0, py = 0, side = 1;
+    var chasing = false, px = 0, py = 0, side = 1, act = null, wait = 1.5;
     function slide(y) { inner.style.webkitTransform = inner.style.transform = 'translateY(' + y + 'px)'; }
     function look(x) { eyes.style.webkitTransform = eyes.style.transform = 'translateX(' + x + 'px)'; }
     function fade(on) { inner.style.opacity = on ? '1' : '0'; }
     function after(ms, fn) { palTimer = setTimeout(function () { if (saverOn) fn(); }, ms); }
     function rnd(a, b) { return a + Math.random() * (b - a); }
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
     function instant(fn) {
       inner.style.webkitTransition = inner.style.transition = 'none';
       fn();
@@ -921,37 +923,87 @@
       inner.style.webkitTransition = inner.style.transition = '';
     }
 
-    /** Chase: the clock bounces around the screen; the kitten runs after it, a step behind, and swipes at it. */
+    // The ways it tries: jump at it, throw a rope, pounce, swat with both paws, or sit and stare. [kind, seconds, weight]
+    var ACTS = [['hop', 0.9, 25], ['rope', 1.9, 25], ['pounce', 1.3, 20], ['swat', 1.4, 18], ['sit', 1.6, 12]];
+
+    function startAct() {
+      var total = 0, i;
+      for (i = 0; i < ACTS.length; i++) total += ACTS[i][2];
+      var roll = Math.random() * total;
+      for (i = 0; i < ACTS.length - 1; i++) { roll -= ACTS[i][2]; if (roll < 0) break; }
+      act = {kind: ACTS[i][0], dur: ACTS[i][1], t: 0};
+      wrap.className = 'pal chase act-' + act.kind;
+    }
+
+    function endAct() {
+      act = null;
+      wait = rnd(0.8, 2.4);
+      wrap.className = 'pal chase';
+      rope.style.display = 'none';
+    }
+
+    /** The rope flies out toward the clock, a little short of it, and is pulled back: it always misses. */
+    function throwRope(t, cx, cy) {
+      var sx = side === 1 ? px + 6 : px + PAL_W - 6, sy = py + 78;
+      var dx = cx - sx, dy = cy - sy, dist = Math.sqrt(dx * dx + dy * dy);
+      var f = t < 0.5 ? t / 0.5 : t < 1.1 ? 1 : Math.max(0, 1 - (t - 1.1) / 0.7);
+      rope.style.display = f > 0 ? 'block' : 'none';
+      rope.style.width = Math.round(dist * 0.9 * f) + 'px';
+      rope.style.webkitTransform = rope.style.transform = 'translate3d(' + Math.round(sx) + 'px,' + Math.round(sy) + 'px,0) rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI).toFixed(1) + 'deg)';
+    }
+
+    /** Chase: the clock bounces around the screen; the kitten runs after it, a step behind, and tries to catch it. */
     function chase() {
       wrap.className = 'pal chase';
       wrap.style.left = '0px';
       wrap.style.top = '0px';
       rot.style.webkitTransform = rot.style.transform = 'rotate(0deg)';
-      px = Math.max(0, Math.min(1920 - PAL_W, motion.x + motion.w + 12));
-      py = Math.max(0, Math.min(1080 - PAL_H, motion.y));
+      px = clamp(motion.x + motion.w + 12, 0, 1920 - PAL_W);
+      py = clamp(motion.y, 0, 1080 - PAL_H);
+      act = null;
+      wait = 1.5;
       instant(function () { slide(0); fade(false); });
       chasing = true;
       palStep = step;
       step(0);
       after(80, function () {
         fade(true);
-        after(rnd(24000, 34000), leave);
+        after(rnd(26000, 36000), leave);
       });
     }
 
-    /** One frame of the chase: stay beside the clock (on the side with room), a little behind it. */
+    /** One frame: stay beside the clock (on the side with room), a step behind, or do what the current action says. */
     function step(dt) {
       if (!chasing) return;
       var right = motion.x + motion.w + PAL_W + 20 <= 1920, left = motion.x - PAL_W - 20 >= 0;
       if (side === 1 && !right && left) side = -1;
       else if (side === -1 && !left && right) side = 1;
-      var tx = side === 1 ? motion.x + motion.w + 12 : motion.x - PAL_W - 12;
-      var ty = motion.y;
-      tx = Math.max(0, Math.min(1920 - PAL_W, tx));
-      ty = Math.max(0, Math.min(1080 - PAL_H, ty));
-      var k = Math.min(1, dt * 3);
-      px += (tx - px) * k;
-      py += (ty - py) * k;
+      var cx = motion.x + motion.w / 2, cy = motion.y + motion.h / 2;
+      var tx = clamp(side === 1 ? motion.x + motion.w + 12 : motion.x - PAL_W - 12, 0, 1920 - PAL_W);
+      var ty = clamp(motion.y, 0, 1080 - PAL_H);
+      var k = 3;
+      if (act) {
+        act.t += dt;
+        if (act.kind === 'pounce') {
+          // dash onto the clock, then slide back off it
+          if (act.t < 0.4) { tx = clamp(cx - PAL_W / 2, 0, 1920 - PAL_W); ty = clamp(cy - PAL_H / 2, 0, 1080 - PAL_H); k = 14; }
+          else k = 1.5;
+        } else if (act.kind === 'hop') {
+          k = act.t < 0.5 ? 6 : 3;
+        } else if (act.kind === 'sit') {
+          k = 0;
+        } else if (act.kind === 'rope') {
+          k = 2;
+          throwRope(act.t, cx, cy);
+        }
+        if (act.t >= act.dur) endAct();
+      } else {
+        wait -= dt;
+        if (wait <= 0) startAct();
+      }
+      var m = Math.min(1, dt * k);
+      px += (tx - px) * m;
+      py += (ty - py) * m;
       wrap.style.webkitTransform = wrap.style.transform = 'translate3d(' + Math.round(px) + 'px,' + Math.round(py) + 'px,0)';
       svg.style.webkitTransform = svg.style.transform = side === 1 ? '' : 'scaleX(-1)';
       look(side === 1 ? -7 : 7);
@@ -959,7 +1011,11 @@
 
     /** The kitten gives up on the clock, fades away and comes back later at the edges. */
     function leave() {
+      act = null;
+      wait = 1e9;
+      wrap.className = 'pal chase';
       fade(false);
+      rope.style.display = 'none';
       after(800, function () { chasing = false; palStep = null; peeks(3); });
     }
 
@@ -1011,11 +1067,9 @@
     after(2500, chase);
   }
 
-  /** The clock drifts diagonally and bounces off the edges of the screen, changing colour on each bounce, like a DVD logo. */
-  var CLOCK_COLORS = ['#FFFFFF', '#FF9F43', '#54A0FF', '#5FD38D', '#FF6B81', '#C792EA', '#FFD166'];
-
+  /** The clock drifts diagonally and bounces off the edges of the screen, like a DVD logo. */
   function startBounce(clock) {
-    var m = motion, last = 0, color = 0;
+    var m = motion, last = 0;
     m.x = Math.random() * 700;
     m.y = Math.random() * 300;
     m.vx = Math.random() < 0.5 ? 130 : -130;
@@ -1032,11 +1086,7 @@
       else if (m.x > maxX) { m.x = maxX; m.vx = -Math.abs(m.vx); hit = true; }
       if (m.y < 0) { m.y = 0; m.vy = Math.abs(m.vy); hit = true; }
       else if (m.y > maxY) { m.y = maxY; m.vy = -Math.abs(m.vy); hit = true; }
-      if (hit) {
-        color = (color + 1) % CLOCK_COLORS.length;
-        clock.style.color = CLOCK_COLORS[color];
-        measure();
-      }
+      if (hit) measure();
       clock.style.webkitTransform = clock.style.transform = 'translate3d(' + m.x.toFixed(1) + 'px,' + m.y.toFixed(1) + 'px,0)';
       if (palStep) palStep(dt);
       saverRaf = requestAnimationFrame(frame);
@@ -1047,49 +1097,30 @@
   }
 
   function showSaver() {
-    var photos = Data.showcase().filter(function (p) { return p.backdrop && Data.appFor(p.app); });
     saverOn = true;
     setClass(body, 'saver', true);   // the home screen's animations pause under it
     var s = $('saver');
     s.innerHTML = '';
-    var a = el('div', 'photo', s), b = el('div', 'photo', s);
     el('div', 'aurora', s).innerHTML = '<i class="a1"></i><i class="a2"></i><i class="a3"></i>';
-    el('div', 'shade', s);
     startPal(s);
     var clock = el('div', 'clock', s);
     el('div', 'time', clock);
     el('div', 'date', clock);
-    el('div', 'title', clock);
     var measureClock = startBounce(clock);
-    var front = a;
     function next() {
       if (!saverOn) return;
-      var p = photos.length ? photos[saverIndex++ % photos.length] : null;
-      var back = front === a ? b : a;
-      if (p) {
-        back.style.backgroundImage = 'url(' + Data.image(p.backdrop, 'w1280') + ')';
-        back.style.webkitTransform = back.style.transform = 'scale(1.0)';
-        clock.lastChild.textContent = p.title;
-        measureClock();
-        setTimeout(function () {
-          setClass(back, 'on', true);
-          setClass(front, 'on', false);
-          back.style.webkitTransform = back.style.transform = 'scale(1.08) translateX(-1.5%)';
-          front = back;
-        }, 60);
-      }
       tickSaverClock(clock);
       measureClock();
-      saverTimer = setTimeout(next, 12000);
+      saverTimer = setTimeout(next, 5000);
     }
     setClass(s, 'on', true);
     next();
   }
 
   function tickSaverClock(clock) {
-    var d = new Date();
-    clock.firstChild.textContent = formatDate('format|h:mm', d.getTime());
-    clock.children[1].textContent = formatDate('format|EEEE, MMMM d', d.getTime());
+    var now = Date.now();
+    clock.firstChild.textContent = formatDate('format|h:mm', now);
+    clock.lastChild.textContent = formatDate('format|EEEE, MMMM d', now);
   }
 
   function hideSaver() {

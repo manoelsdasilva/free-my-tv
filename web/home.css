@@ -59,6 +59,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #sky .night { background: -webkit-linear-gradient(top, #1C1C1E, #0B0B0D); background: linear-gradient(#1C1C1E, #0B0B0D); opacity: 0; }
 #sky canvas { position: absolute; left: -4%; top: -4%; width: 108%; height: 108%; opacity: 0; -webkit-transition: opacity 0.8s; transition: opacity 0.8s; }
 #sky canvas.on { opacity: 1; }
+.night #sky canvas.on { opacity: 0; }
 #sky .veil { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: rgba(245, 245, 247, 0.74); -webkit-transition: background-color 2s; transition: background-color 2s; }
 #sky .lift { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #FFF; opacity: 0; -webkit-transition: opacity 0.45s, background-color 2s; transition: opacity 0.45s, background-color 2s; }
 .night #sky .day { opacity: 0; }
@@ -525,15 +526,40 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 @-webkit-keyframes palblink { 0%, 92%, 100% { -webkit-transform: scaleY(1); } 96% { -webkit-transform: scaleY(0.08); } }
 @keyframes palblink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.08); } }
 
-/* The clock bounces around the screen (script); the kitten runs after it and swipes its paw at it. */
-#saver .clock { position: absolute; left: 0; top: 0; color: #FFF; white-space: nowrap; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.55); -webkit-transition: color 0.5s; transition: color 0.5s; will-change: transform; }
+/* The clock bounces around the screen (script); the kitten runs after it and tries to catch it. */
+#saver .clock { position: absolute; left: 0; top: 0; color: #FFF; text-align: left; white-space: nowrap; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.55); will-change: transform; }
 #saver .pal.chase { will-change: transform; }
+#saver .pal .rot { -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%; }
 #saver .pal.chase .rot { -webkit-animation: palbob 0.55s ease-in-out infinite alternate; animation: palbob 0.55s ease-in-out infinite alternate; }
 #saver .pal.chase .paw.l { -webkit-transform-origin: 8px 42px; transform-origin: 8px 42px; -webkit-animation: palswipe 2.4s ease-in-out infinite; animation: palswipe 2.4s ease-in-out infinite; }
+#saver .pal .paw.r { -webkit-transform-origin: 112px 42px; transform-origin: 112px 42px; }
+/* jump: crouch, leap with both paws up, land */
+#saver .pal.chase.act-hop .rot { -webkit-animation: palhop 0.9s ease-in-out 1; animation: palhop 0.9s ease-in-out 1; }
+#saver .pal.chase.act-hop .paw.l { -webkit-animation: none; animation: none; -webkit-transform: rotate(150deg); transform: rotate(150deg); }
+#saver .pal.chase.act-hop .paw.r { -webkit-transform: rotate(-150deg); transform: rotate(-150deg); }
+/* rope: the throwing arm goes up */
+#saver .pal.chase.act-rope .paw.l { -webkit-animation: none; animation: none; -webkit-transform: rotate(125deg); transform: rotate(125deg); }
+/* pounce: stretched out, both paws forward */
+#saver .pal.chase.act-pounce .rot { -webkit-animation: none; animation: none; -webkit-transform: scale(1.15, 0.9); transform: scale(1.15, 0.9); }
+#saver .pal.chase.act-pounce .paw.l { -webkit-animation: none; animation: none; -webkit-transform: rotate(100deg); transform: rotate(100deg); }
+#saver .pal.chase.act-pounce .paw.r { -webkit-transform: rotate(-100deg); transform: rotate(-100deg); }
+/* swat: both paws batting fast */
+#saver .pal.chase.act-swat .paw.l { -webkit-animation: palswat 0.35s ease-in-out infinite alternate; animation: palswat 0.35s ease-in-out infinite alternate; }
+#saver .pal.chase.act-swat .paw.r { -webkit-animation: palswatr 0.35s ease-in-out 0.17s infinite alternate; animation: palswatr 0.35s ease-in-out 0.17s infinite alternate; }
+/* sit: no bobbing */
+#saver .pal.chase.act-sit .rot { -webkit-animation: none; animation: none; }
+#saver .rope { display: none; position: absolute; left: 0; top: 0; height: 5px; margin-top: -2px; background: #C9A26B; border-radius: 3px; -webkit-transform-origin: 0 50%; transform-origin: 0 50%; will-change: transform; }
+#saver .rope:after { content: ''; position: absolute; right: -16px; top: -13px; width: 24px; height: 24px; border: 5px solid #C9A26B; border-radius: 50%; }
 @-webkit-keyframes palbob { from { -webkit-transform: translateY(0); } to { -webkit-transform: translateY(-7px); } }
 @keyframes palbob { from { transform: translateY(0); } to { transform: translateY(-7px); } }
+@-webkit-keyframes palhop { 0% { -webkit-transform: translateY(0) scale(1, 1); } 20% { -webkit-transform: translateY(0) scale(1.1, 0.86); } 55% { -webkit-transform: translateY(-140px) scale(0.96, 1.08); } 100% { -webkit-transform: translateY(0) scale(1, 1); } }
+@keyframes palhop { 0% { transform: translateY(0) scale(1, 1); } 20% { transform: translateY(0) scale(1.1, 0.86); } 55% { transform: translateY(-140px) scale(0.96, 1.08); } 100% { transform: translateY(0) scale(1, 1); } }
 @-webkit-keyframes palswipe { 0%, 55%, 100% { -webkit-transform: rotate(0deg); } 65% { -webkit-transform: rotate(75deg); } 75% { -webkit-transform: rotate(10deg); } 85% { -webkit-transform: rotate(75deg); } 92% { -webkit-transform: rotate(0deg); } }
 @keyframes palswipe { 0%, 55%, 100% { transform: rotate(0deg); } 65% { transform: rotate(75deg); } 75% { transform: rotate(10deg); } 85% { transform: rotate(75deg); } 92% { transform: rotate(0deg); } }
+@-webkit-keyframes palswat { from { -webkit-transform: rotate(10deg); } to { -webkit-transform: rotate(110deg); } }
+@-webkit-keyframes palswatr { from { -webkit-transform: rotate(-10deg); } to { -webkit-transform: rotate(-110deg); } }
+@keyframes palswatr { from { transform: rotate(-10deg); } to { transform: rotate(-110deg); } }
+@keyframes palswat { from { transform: rotate(10deg); } to { transform: rotate(110deg); } }
 #saver .clock .time { font-size: 150px; font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
 #saver .clock .date { margin-top: 10px; font-size: 34px; font-weight: 500; color: rgba(255, 255, 255, 0.82); }
 #saver .clock .title { margin-top: 18px; font-size: 26px; font-weight: 500; color: rgba(255, 255, 255, 0.65); }
