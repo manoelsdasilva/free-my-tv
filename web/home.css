@@ -68,6 +68,22 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .drawer-open #sky .lift { opacity: 0.32; }
 .night.drawer-open #sky .lift { opacity: 0.42; }
 
+/* Aurora: at night, three soft colour pools drift slowly over the dark background. Only transform moves, so a TV's GPU
+   composites it; the pools are plain radial gradients (no blur filter). */
+#sky .aurora, #saver .aurora { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; opacity: 0; -webkit-transition: opacity 2s; transition: opacity 2s; }
+.night #sky .aurora, #saver .aurora { opacity: 1; }
+#sky .aurora i, #saver .aurora i { position: absolute; width: 1300px; height: 1300px; border-radius: 50%; -webkit-animation-timing-function: ease-in-out; animation-timing-function: ease-in-out; -webkit-animation-iteration-count: infinite; animation-iteration-count: infinite; -webkit-animation-direction: alternate; animation-direction: alternate; }
+#sky .a1, #saver .a1 { left: -300px; top: -500px; background: -webkit-radial-gradient(circle, rgba(30, 90, 255, 0.34), rgba(30, 90, 255, 0) 68%); background: radial-gradient(circle, rgba(30, 90, 255, 0.34), rgba(30, 90, 255, 0) 68%); -webkit-animation-name: drift1; animation-name: drift1; -webkit-animation-duration: 52s; animation-duration: 52s; }
+#sky .a2, #saver .a2 { left: 900px; top: -200px; background: -webkit-radial-gradient(circle, rgba(140, 70, 235, 0.3), rgba(140, 70, 235, 0) 68%); background: radial-gradient(circle, rgba(140, 70, 235, 0.3), rgba(140, 70, 235, 0) 68%); -webkit-animation-name: drift2; animation-name: drift2; -webkit-animation-duration: 68s; animation-duration: 68s; }
+#sky .a3, #saver .a3 { left: 200px; top: 500px; background: -webkit-radial-gradient(circle, rgba(255, 122, 26, 0.16), rgba(255, 122, 26, 0) 68%); background: radial-gradient(circle, rgba(255, 122, 26, 0.16), rgba(255, 122, 26, 0) 68%); -webkit-animation-name: drift3; animation-name: drift3; -webkit-animation-duration: 60s; animation-duration: 60s; }
+.saver #sky .aurora i { -webkit-animation-play-state: paused; animation-play-state: paused; }
+@-webkit-keyframes drift1 { from { -webkit-transform: translate3d(0, 0, 0) scale(1); } to { -webkit-transform: translate3d(700px, 380px, 0) scale(1.15); } }
+@keyframes drift1 { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(700px, 380px, 0) scale(1.15); } }
+@-webkit-keyframes drift2 { from { -webkit-transform: translate3d(0, 0, 0) scale(1.1); } to { -webkit-transform: translate3d(-800px, 420px, 0) scale(0.9); } }
+@keyframes drift2 { from { transform: translate3d(0, 0, 0) scale(1.1); } to { transform: translate3d(-800px, 420px, 0) scale(0.9); } }
+@-webkit-keyframes drift3 { from { -webkit-transform: translate3d(0, 0, 0) scale(0.95); } to { -webkit-transform: translate3d(900px, -260px, 0) scale(1.2); } }
+@keyframes drift3 { from { transform: translate3d(0, 0, 0) scale(0.95); } to { transform: translate3d(900px, -260px, 0) scale(1.2); } }
+
 /* MARK: - Moving parts: the top fades and everything rises when the drawer opens. */
 
 /* Each part is its own stack, so a focused tile (z-index) never shows over the drawer, a sheet or the screensaver. */
@@ -495,20 +511,29 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #saver { background: #000; opacity: 0; visibility: hidden; -webkit-transition: opacity 1.2s, visibility 0s 1.2s; transition: opacity 1.2s, visibility 0s 1.2s; }
 #saver.on { opacity: 1; visibility: visible; -webkit-transition-delay: 0s; transition-delay: 0s; }
 #saver .photo { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background-size: cover; background-position: center; opacity: 0; -webkit-transition: opacity 2.4s, -webkit-transform 24s linear; transition: opacity 2.4s, transform 24s linear; }
-#saver .photo.on { opacity: 1; }
+#saver .photo.on { opacity: 0.2; }
 #saver .shade { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; background: -webkit-linear-gradient(top, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55)); background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55)); }
-#saver .clock {
-  position: absolute;
-  left: 80px;
-  bottom: 90px;
-  padding: 26px 46px 30px;
-  border-radius: 46px;
-  color: #FFF;
-  background: -webkit-linear-gradient(top, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1));
-  background: linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1));
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.35), inset 0 1.5px 0 rgba(255, 255, 255, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
-  white-space: nowrap;
-}
+#saver .pal { position: absolute; width: 180px; height: 150px; pointer-events: none; }
+#saver .pal .rot { width: 100%; height: 100%; }
+#saver .pal .in { width: 100%; height: 100%; -webkit-transform: translateY(170px); transform: translateY(170px); -webkit-transition: -webkit-transform 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.25), opacity 0.6s; transition: transform 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.25), opacity 0.6s; }
+#saver .pal .eyes { -webkit-transition: -webkit-transform 0.3s ease-out; transition: transform 0.3s ease-out; }
+#saver .pal .ear.l { -webkit-transform-origin: 25px 22px; transform-origin: 25px 22px; -webkit-animation: palflick 5s ease-in-out infinite; animation: palflick 5s ease-in-out infinite; }
+#saver .pal .ear.r { -webkit-transform-origin: 95px 22px; transform-origin: 95px 22px; -webkit-animation: palflick 7s ease-in-out 1.5s infinite; animation: palflick 7s ease-in-out 1.5s infinite; }
+#saver .pal .blink { -webkit-transform-origin: 60px 44px; transform-origin: 60px 44px; -webkit-animation: palblink 3.6s infinite; animation: palblink 3.6s infinite; }
+@-webkit-keyframes palflick { 0%, 85%, 100% { -webkit-transform: rotate(0deg); } 90% { -webkit-transform: rotate(-12deg); } 95% { -webkit-transform: rotate(4deg); } }
+@keyframes palflick { 0%, 85%, 100% { transform: rotate(0deg); } 90% { transform: rotate(-12deg); } 95% { transform: rotate(4deg); } }
+@-webkit-keyframes palblink { 0%, 92%, 100% { -webkit-transform: scaleY(1); } 96% { -webkit-transform: scaleY(0.08); } }
+@keyframes palblink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.08); } }
+
+/* The clock bounces around the screen (script); the kitten runs after it and swipes its paw at it. */
+#saver .clock { position: absolute; left: 0; top: 0; color: #FFF; white-space: nowrap; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.55); -webkit-transition: color 0.5s; transition: color 0.5s; will-change: transform; }
+#saver .pal.chase { will-change: transform; }
+#saver .pal.chase .rot { -webkit-animation: palbob 0.55s ease-in-out infinite alternate; animation: palbob 0.55s ease-in-out infinite alternate; }
+#saver .pal.chase .paw.l { -webkit-transform-origin: 8px 42px; transform-origin: 8px 42px; -webkit-animation: palswipe 2.4s ease-in-out infinite; animation: palswipe 2.4s ease-in-out infinite; }
+@-webkit-keyframes palbob { from { -webkit-transform: translateY(0); } to { -webkit-transform: translateY(-7px); } }
+@keyframes palbob { from { transform: translateY(0); } to { transform: translateY(-7px); } }
+@-webkit-keyframes palswipe { 0%, 55%, 100% { -webkit-transform: rotate(0deg); } 65% { -webkit-transform: rotate(75deg); } 75% { -webkit-transform: rotate(10deg); } 85% { -webkit-transform: rotate(75deg); } 92% { -webkit-transform: rotate(0deg); } }
+@keyframes palswipe { 0%, 55%, 100% { transform: rotate(0deg); } 65% { transform: rotate(75deg); } 75% { transform: rotate(10deg); } 85% { transform: rotate(75deg); } 92% { transform: rotate(0deg); } }
 #saver .clock .time { font-size: 150px; font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
 #saver .clock .date { margin-top: 10px; font-size: 34px; font-weight: 500; color: rgba(255, 255, 255, 0.82); }
 #saver .clock .title { margin-top: 18px; font-size: 26px; font-weight: 500; color: rgba(255, 255, 255, 0.65); }

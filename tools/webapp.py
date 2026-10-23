@@ -52,6 +52,7 @@ def read_config(path):
         'latitude': number('latitude', '40.7128'),
         'longitude': number('longitude', '-74.0060'),
         'city': values.get('city', ''),
+        'userName': values.get('name', ''),
         'language': values.get('language', 'auto') or 'auto',
         'currency': values.get('currency', 'USD') or 'USD',
         'temperature': values.get('temperature', 'auto') or 'auto',

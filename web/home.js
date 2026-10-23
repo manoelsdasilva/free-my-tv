@@ -62,19 +62,20 @@
 
   /** Shelf apps in this order when installed, like the Android app: key, LG app id, name on the TV, brand gradient. */
   var SHELF = [
+    ['stremio', /stremio/, /stremio/i, ['#7B5BF5', '#3D2A9E']],
     ['netflix', /^netflix$/, /netflix/i, ['#0A0A0A', '#000000']],
-    ['youtube', /youtube/, /^youtube$/i, ['#1C1C1E', '#09090A']],
-    ['prime', /^amazon$/, /prime video|amazon/i, ['#2AA8FF', '#0A68D4']],
-    ['disney', /disney/, /disney/i, ['#173584', '#08143F']],
     ['max', /hbo|wbd/, /^(hbo )?max$|hbo max/i, ['#5C30E8', '#221684']],
     ['appletv', /appletv|apple\.tv/, /apple tv/i, ['#1C1C1E', '#000000']],
+    ['prime', /^amazon$/, /prime video/i, ['#2AA8FF', '#0A68D4']],
+    ['spotify', /spotify/, /spotify/i, ['#1DB954', '#0F7A36']],
+    ['youtube', /youtube/, /^youtube$/i, ['#1C1C1E', '#09090A']],
+    ['disney', /disney/, /disney/i, ['#173584', '#08143F']],
     ['hulu', /^hulu/, /hulu/i, ['#1CE783', '#0B8F4E']],
     ['paramount', /paramount|cbs/, /paramount/i, ['#0064FF', '#002A86']],
     ['peacock', /peacock/, /peacock/i, ['#1C1C1E', '#000000']],
     ['nfl', /nfl/, /^nfl/i, ['#013369', '#00163D']],
     ['globoplay', /globoplay/, /globoplay/i, ['#FF8A1F', '#FF2D5A']],
-    ['jellyfin', /jellyfin/i, /jellyfin/i, ['#AA5CC3', '#00A4DC']],
-    ['spotify', /spotify/, /spotify/i, ['#1DB954', '#0F7A36']]
+    ['jellyfin', /jellyfin/i, /jellyfin/i, ['#AA5CC3', '#00A4DC']]
   ];
   var MAX_SHELF = 8;
 
@@ -195,8 +196,17 @@
 
   var TAB_KIND = [null, 'movie', 'tv'];
 
+  /** The title: a greeting for the time of day, with the person's name when config.properties has one. */
+  function greet() {
+    var h = new Date().getHours();
+    var hello = h >= 5 && h < 12 ? tr('Good morning') : h >= 12 && h < 18 ? tr('Good afternoon') : tr('Good evening');
+    var text = CONFIG.userName ? hello + ', ' + CONFIG.userName : hello;
+    var title = $('title');
+    if (title.textContent !== text) title.textContent = text;
+  }
+
   function renderTop() {
-    $('title').textContent = tr('For You');
+    greet();
     var tabs = $('tabs');
     tabs.innerHTML = '';
     var names = [tr('Explore'), tr('Movies'), tr('Shows')];
@@ -282,6 +292,7 @@
     var d = new Date(), c = $('clock');
     c.firstChild.textContent = formatDate('format|h:mm', d.getTime());
     c.lastChild.textContent = formatDate('format|EEEE, MMMM d', d.getTime());
+    greet();
   }
 
   // MARK: - Shelf
@@ -875,26 +886,191 @@
 
   var saverOn = false, idleAt = Date.now(), saverIndex = 0, saverTimer = 0, SAVER_AFTER = 5 * 60000;
 
+  // MARK: - The screensaver kitten: chases the floating clock, then hides and peeks in from the edges of the screen
+
+  var palTimer = 0, saverRaf = 0, palStep = null;
+  var motion = {x: 0, y: 0, w: 500, h: 220, vx: 130, vy: 96};
+  var PAL_W = 180, PAL_H = 150;
+  // A blocky orange kitten in the style of Claude's mascot: square body, two upright eyes, stubby arms and legs.
+  var PAL_SVG = '<svg viewBox="0 0 120 100" width="' + PAL_W + '" height="' + PAL_H + '">' +
+    '<g fill="#D97757"><rect class="ear l" x="16" y="6" width="18" height="18"/><rect class="ear r" x="86" y="6" width="18" height="18"/>' +
+    '<rect x="14" y="20" width="92" height="52"/>' +
+    '<rect class="paw l" x="0" y="40" width="16" height="26"/><rect class="paw r" x="104" y="40" width="16" height="26"/>' +
+    '<rect x="26" y="72" width="12" height="22"/><rect x="46" y="72" width="12" height="22"/>' +
+    '<rect x="62" y="72" width="12" height="22"/><rect x="82" y="72" width="12" height="22"/></g>' +
+    '<g fill="#B85C3E"><rect x="21" y="11" width="8" height="9"/><rect x="91" y="11" width="8" height="9"/></g>' +
+    '<g class="eyes"><g class="blink" fill="#141414"><rect x="38" y="34" width="10" height="20"/><rect x="72" y="34" width="10" height="20"/></g></g>' +
+    '<rect x="56" y="58" width="8" height="5" fill="#F2B8A8"/>' +
+    '<g fill="#F3D3C4"><rect x="18" y="54" width="16" height="2"/><rect x="18" y="60" width="16" height="2"/>' +
+    '<rect x="86" y="54" width="16" height="2"/><rect x="86" y="60" width="16" height="2"/></g></svg>';
+
+  function startPal(saver) {
+    var wrap = el('div', 'pal', saver), rot = el('div', 'rot', wrap), inner = el('div', 'in', rot);
+    inner.innerHTML = PAL_SVG;
+    var eyes = inner.querySelector('.eyes'), svg = inner.querySelector('svg');
+    var chasing = false, px = 0, py = 0, side = 1;
+    function slide(y) { inner.style.webkitTransform = inner.style.transform = 'translateY(' + y + 'px)'; }
+    function look(x) { eyes.style.webkitTransform = eyes.style.transform = 'translateX(' + x + 'px)'; }
+    function fade(on) { inner.style.opacity = on ? '1' : '0'; }
+    function after(ms, fn) { palTimer = setTimeout(function () { if (saverOn) fn(); }, ms); }
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function instant(fn) {
+      inner.style.webkitTransition = inner.style.transition = 'none';
+      fn();
+      void inner.offsetWidth;   // apply that state before animating out of it
+      inner.style.webkitTransition = inner.style.transition = '';
+    }
+
+    /** Chase: the clock bounces around the screen; the kitten runs after it, a step behind, and swipes at it. */
+    function chase() {
+      wrap.className = 'pal chase';
+      wrap.style.left = '0px';
+      wrap.style.top = '0px';
+      rot.style.webkitTransform = rot.style.transform = 'rotate(0deg)';
+      px = Math.max(0, Math.min(1920 - PAL_W, motion.x + motion.w + 12));
+      py = Math.max(0, Math.min(1080 - PAL_H, motion.y));
+      instant(function () { slide(0); fade(false); });
+      chasing = true;
+      palStep = step;
+      step(0);
+      after(80, function () {
+        fade(true);
+        after(rnd(24000, 34000), leave);
+      });
+    }
+
+    /** One frame of the chase: stay beside the clock (on the side with room), a little behind it. */
+    function step(dt) {
+      if (!chasing) return;
+      var right = motion.x + motion.w + PAL_W + 20 <= 1920, left = motion.x - PAL_W - 20 >= 0;
+      if (side === 1 && !right && left) side = -1;
+      else if (side === -1 && !left && right) side = 1;
+      var tx = side === 1 ? motion.x + motion.w + 12 : motion.x - PAL_W - 12;
+      var ty = motion.y;
+      tx = Math.max(0, Math.min(1920 - PAL_W, tx));
+      ty = Math.max(0, Math.min(1080 - PAL_H, ty));
+      var k = Math.min(1, dt * 3);
+      px += (tx - px) * k;
+      py += (ty - py) * k;
+      wrap.style.webkitTransform = wrap.style.transform = 'translate3d(' + Math.round(px) + 'px,' + Math.round(py) + 'px,0)';
+      svg.style.webkitTransform = svg.style.transform = side === 1 ? '' : 'scaleX(-1)';
+      look(side === 1 ? -7 : 7);
+    }
+
+    /** The kitten gives up on the clock, fades away and comes back later at the edges. */
+    function leave() {
+      fade(false);
+      after(800, function () { chasing = false; palStep = null; peeks(3); });
+    }
+
+    /** Puts the kitten on an edge with its feet on the edge: turned so "down" points off the screen. */
+    function place() {
+      var edge = Math.floor(Math.random() * 4), cx, cy, deg;
+      if (edge === 0) { cx = rnd(PAL_W, 1920 - PAL_W); cy = 1080 - PAL_H / 2; deg = 0; }          // bottom
+      else if (edge === 1) { cx = rnd(PAL_W, 1920 - PAL_W); cy = PAL_H / 2; deg = 180; }          // top
+      else if (edge === 2) { cx = PAL_H / 2; cy = rnd(160, 920); deg = 90; }                        // left
+      else { cx = 1920 - PAL_H / 2; cy = rnd(160, 920); deg = -90; }                                // right
+      wrap.style.left = (cx - PAL_W / 2) + 'px';
+      wrap.style.top = (cy - PAL_H / 2) + 'px';
+      rot.style.webkitTransform = rot.style.transform = 'rotate(' + deg + 'deg)';
+    }
+
+    function peeks(left) {
+      if (left <= 0) { chase(); return; }
+      chasing = false;
+      palStep = null;
+      wrap.className = 'pal';
+      wrap.style.webkitTransform = wrap.style.transform = '';
+      svg.style.webkitTransform = svg.style.transform = '';
+      instant(function () { slide(PAL_H + 20); fade(true); look(0); place(); });
+      after(60, function () {
+        slide(PAL_H * 0.28);
+        after(900, function () {
+          look(-7);
+          after(700, function () {
+            look(7);
+            after(800, function () {
+              look(0);
+              var fake = Math.random() < 0.35;
+              after(500, function () {
+                slide(PAL_H + 20);
+                after(fake ? 900 : 0, function () {
+                  if (fake) {
+                    slide(PAL_H * 0.5);
+                    after(500, function () { slide(PAL_H + 20); after(rnd(3000, 6000), function () { peeks(left - 1); }); });
+                  } else {
+                    after(rnd(3000, 6000), function () { peeks(left - 1); });
+                  }
+                });
+              });
+            });
+          });
+        });
+      });
+    }
+    after(2500, chase);
+  }
+
+  /** The clock drifts diagonally and bounces off the edges of the screen, changing colour on each bounce, like a DVD logo. */
+  var CLOCK_COLORS = ['#FFFFFF', '#FF9F43', '#54A0FF', '#5FD38D', '#FF6B81', '#C792EA', '#FFD166'];
+
+  function startBounce(clock) {
+    var m = motion, last = 0, color = 0;
+    m.x = Math.random() * 700;
+    m.y = Math.random() * 300;
+    m.vx = Math.random() < 0.5 ? 130 : -130;
+    m.vy = Math.random() < 0.5 ? 96 : -96;
+    function measure() { m.w = clock.offsetWidth; m.h = clock.offsetHeight; }
+    function frame(now) {
+      if (!saverOn) return;
+      var dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+      last = now;
+      m.x += m.vx * dt;
+      m.y += m.vy * dt;
+      var maxX = Math.max(0, 1920 - m.w), maxY = Math.max(0, 1080 - m.h), hit = false;
+      if (m.x < 0) { m.x = 0; m.vx = Math.abs(m.vx); hit = true; }
+      else if (m.x > maxX) { m.x = maxX; m.vx = -Math.abs(m.vx); hit = true; }
+      if (m.y < 0) { m.y = 0; m.vy = Math.abs(m.vy); hit = true; }
+      else if (m.y > maxY) { m.y = maxY; m.vy = -Math.abs(m.vy); hit = true; }
+      if (hit) {
+        color = (color + 1) % CLOCK_COLORS.length;
+        clock.style.color = CLOCK_COLORS[color];
+        measure();
+      }
+      clock.style.webkitTransform = clock.style.transform = 'translate3d(' + m.x.toFixed(1) + 'px,' + m.y.toFixed(1) + 'px,0)';
+      if (palStep) palStep(dt);
+      saverRaf = requestAnimationFrame(frame);
+    }
+    measure();
+    saverRaf = requestAnimationFrame(frame);
+    return measure;
+  }
+
   function showSaver() {
     var photos = Data.showcase().filter(function (p) { return p.backdrop && Data.appFor(p.app); });
     saverOn = true;
+    setClass(body, 'saver', true);   // the home screen's animations pause under it
     var s = $('saver');
     s.innerHTML = '';
     var a = el('div', 'photo', s), b = el('div', 'photo', s);
+    el('div', 'aurora', s).innerHTML = '<i class="a1"></i><i class="a2"></i><i class="a3"></i>';
     el('div', 'shade', s);
+    startPal(s);
     var clock = el('div', 'clock', s);
     el('div', 'time', clock);
     el('div', 'date', clock);
     el('div', 'title', clock);
+    var measureClock = startBounce(clock);
     var front = a;
     function next() {
       if (!saverOn) return;
       var p = photos.length ? photos[saverIndex++ % photos.length] : null;
       var back = front === a ? b : a;
       if (p) {
-        back.style.backgroundImage = 'url(' + Data.image(p.backdrop, 'original') + ')';
+        back.style.backgroundImage = 'url(' + Data.image(p.backdrop, 'w1280') + ')';
         back.style.webkitTransform = back.style.transform = 'scale(1.0)';
         clock.lastChild.textContent = p.title;
+        measureClock();
         setTimeout(function () {
           setClass(back, 'on', true);
           setClass(front, 'on', false);
@@ -903,6 +1079,7 @@
         }, 60);
       }
       tickSaverClock(clock);
+      measureClock();
       saverTimer = setTimeout(next, 12000);
     }
     setClass(s, 'on', true);
@@ -917,7 +1094,11 @@
 
   function hideSaver() {
     saverOn = false;
+    setClass(body, 'saver', false);
     clearTimeout(saverTimer);
+    clearTimeout(palTimer);
+    if (saverRaf) cancelAnimationFrame(saverRaf);
+    palStep = null;
     setClass($('saver'), 'on', false);
   }
 
