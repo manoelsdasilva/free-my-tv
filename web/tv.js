@@ -197,6 +197,14 @@ var TV = (function () {
     }
   }
 
+  function samsungProp(name, done) {
+    try {
+      window.tizen.systeminfo.getPropertyValue(name, function (v) { done(v); }, function () { done(null); });
+    } catch (e) {
+      done(null);
+    }
+  }
+
   function samsungLaunch(id, done) {
     try {
       window.tizen.application.launch(id, function () { if (done) done(true); }, function () { if (done) done(false); });
@@ -377,6 +385,51 @@ var TV = (function () {
         try { return window.tizen.time.getLocalTimezone() || ''; } catch (e) {}
       }
       try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; }
+    },
+
+    /**
+     * What the TV tells about itself, for the System card: {model, firmware, os, screen, panel, network, cores, memory},
+     * only the parts it answers. Samsung asks productinfo and systeminfo; the others have little to say.
+     */
+    info: function (done) {
+      var out = {cores: navigator.hardwareConcurrency || 0, memory: navigator.deviceMemory || 0};
+      if (!samsung) {
+        if (!webos) { out.model = 'Preview'; out.screen = '3840 x 2160'; out.os = 'Browser'; }
+        done(out);
+        return;
+      }
+      try {
+        var p = window.webapis && window.webapis.productinfo;
+        if (p) {
+          try { out.model = p.getRealModel() || p.getModel(); } catch (e) {}
+          try { out.firmware = p.getFirmware(); } catch (e) {}
+          try { out.panel = p.is8KPanelSupported && p.is8KPanelSupported() ? '8K' : p.isUdPanelSupported && p.isUdPanelSupported() ? '4K' : 'FHD'; } catch (e) {}
+        }
+      } catch (e) {}
+      try { out.os = 'Tizen ' + window.tizen.systeminfo.getCapability('http://tizen.org/feature/platform.version'); } catch (e) {}
+      var left = 3;
+      function one() { if (--left === 0) done(out); }
+      samsungProp('BUILD', function (v) { if (v && !out.model) out.model = v.model; one(); });
+      samsungProp('DISPLAY', function (v) { if (v && v.resolutionWidth) out.screen = v.resolutionWidth + ' x ' + v.resolutionHeight; one(); });
+      samsungProp('NETWORK', function (v) { if (v && v.networkType) out.network = v.networkType; one(); });
+    },
+
+    /** The TV's load now: {cpu: 0..1, heap: {used, limit} in MB}, only what it tells. */
+    load: function (done) {
+      var out = {};
+      try {
+        var m = window.performance && window.performance.memory;
+        if (m && m.jsHeapSizeLimit) out.heap = {used: m.usedJSHeapSize / 1048576, limit: m.jsHeapSizeLimit / 1048576};
+      } catch (e) {}
+      if (!samsung) {
+        if (!webos) out.cpu = 0.2 + Math.random() * 0.3;
+        done(out);
+        return;
+      }
+      samsungProp('CPU', function (v) {
+        if (v && typeof v.load === 'number') out.cpu = v.load;
+        done(out);
+      });
     },
 
     /** Key codes: the arrows, OK and the TV's Back (LG 461, Samsung 10009). */

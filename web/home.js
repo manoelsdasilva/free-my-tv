@@ -353,23 +353,86 @@
     var d = $('drawer');
     var old = d.querySelectorAll('.panel');
     for (var o = 0; o < old.length; o++) d.removeChild(old[o]);
-    var wx = Prefs.weather(), coins = Data.activeCoins(), qt = coins.length > 0;
-    var split = 80 + 1760 * 0.585;
-    if (wx) {
-      var w = el('div', 'panel glass', d);
-      w.id = 'weather';
-      w.style.left = '80px';
-      w.style.width = ((qt ? split - 16 : 1840) - 80) + 'px';
-      renderWeather(w);
+    var wx = Prefs.weather(), coins = Data.activeCoins(), qt = coins.length > 0, sy = Prefs.system();
+    var n = (wx ? 1 : 0) + (qt ? 1 : 0) + (sy ? 1 : 0);
+    // Widths of the cards in the row (weather, prices, system), 16 px apart, inside 1760 px.
+    var widths = n === 3 ? [780, 470, 478] : n === 2 ? (wx ? [1030, 714] : [880, 864]) : [1760];
+    var x = 80, at = 0;
+    function panel(id, render) {
+      var p = el('div', 'panel glass', d);
+      p.id = id;
+      p.style.left = x + 'px';
+      p.style.width = widths[at] + 'px';
+      x += widths[at++] + 16;
+      render(p);
     }
-    if (qt) {
-      var q = el('div', 'panel glass', d);
-      q.id = 'prices';
-      var left = wx ? split + 16 : 80;
-      q.style.left = left + 'px';
-      q.style.width = (1840 - left) + 'px';
-      renderPrices(q, coins);
+    if (wx) panel('weather', renderWeather);
+    if (qt) panel('prices', function (p) { renderPrices(p, coins); });
+    if (sy) panel('system', renderSystem);
+    if (!sy) stopSystem();
+  }
+
+  // MARK: - System card: the TV's CPU, memory, screen and model
+
+  var sysInfo = null, sysAsked = false, sysLoad = {}, sysTimer = 0, sysRefs = {};
+
+  function sysRow(card, top, name, bar) {
+    var row = el('div', 'srow', card);
+    row.style.top = top + 'px';
+    el('span', 'k', row, name);
+    var fill = null;
+    if (bar) fill = el('i', '', el('span', 'bar', row));
+    return {v: el('span', 'v', row), bar: fill};
+  }
+
+  function renderSystem(card) {
+    el('div', 'head', card, tr('This TV'));
+    sysRefs = {side: el('div', 'side', card),
+      cpu: sysRow(card, 78, tr('CPU'), true), mem: sysRow(card, 120, tr('Memory'), true),
+      screen: sysRow(card, 162, tr('Display'), false), model: sysRow(card, 204, tr('Model'), false),
+      os: sysRow(card, 246, tr('System'), false)};
+    if (!sysAsked) {
+      sysAsked = true;
+      TV.info(function (i) { sysInfo = i; paintSystem(); });
     }
+    paintSystem();
+  }
+
+  function level(fill, f) {
+    fill.style.webkitTransform = fill.style.transform = 'scaleX(' + Math.max(0.02, Math.min(1, f)) + ')';
+    fill.className = f > 0.85 ? 'hot' : f > 0.6 ? 'warm' : '';
+  }
+
+  function paintSystem() {
+    var r = sysRefs, i = sysInfo || {}, l = sysLoad;
+    if (!r.cpu || !r.cpu.v.parentNode) return;
+    var cpu = typeof l.cpu === 'number';
+    r.cpu.v.textContent = cpu ? Math.round(l.cpu * 100) + '%' : '–';
+    level(r.cpu.bar, cpu ? l.cpu : 0);
+    if (l.heap) {
+      r.mem.v.textContent = Math.round(l.heap.used) + ' MB';
+      level(r.mem.bar, l.heap.used / l.heap.limit);
+    } else {
+      r.mem.v.textContent = i.memory ? '≈ ' + i.memory + ' GB' : '–';
+      level(r.mem.bar, 0);
+    }
+    r.screen.v.textContent = [i.screen, i.panel].filter(Boolean).join(' · ') || '–';
+    r.model.v.textContent = i.model || '–';
+    r.os.v.textContent = [i.os, i.cores ? trf('{n} cores', {n: i.cores}) : ''].filter(Boolean).join(' · ') || '–';
+    r.side.textContent = i.network === 'WIFI' ? 'Wi-Fi' : i.network === 'ETHERNET' ? 'Ethernet' : '';
+  }
+
+  /** The load is read every 2 s, only while the drawer is open. */
+  function startSystem() {
+    stopSystem();
+    if (!Prefs.system()) return;
+    function poll() { TV.load(function (v) { sysLoad = v; paintSystem(); }); }
+    poll();
+    sysTimer = setInterval(poll, 2000);
+  }
+
+  function stopSystem() {
+    if (sysTimer) { clearInterval(sysTimer); sysTimer = 0; }
   }
 
   function renderWeather(card) {
@@ -385,8 +448,9 @@
     el('div', 'cond', card, Data.condition(w.code, w.isDay));
     el('div', 'range', card, trf('H:{max}', {max: Data.degrees(w.max)}) + '   ' + trf('L:{min}', {min: Data.degrees(w.min)}));
     el('div', 'split', card);
-    var hours = el('div', 'hours', card), width = parseFloat(card.style.width) - 30 - 422, hw = width / 6;
-    for (var i = 0; i < w.hours.length && i < 6; i++) {
+    var narrow = parseFloat(card.style.width) < 900, count = narrow ? 4 : 6;
+    var hours = el('div', 'hours', card), width = parseFloat(card.style.width) - 30 - 422, hw = width / count;
+    for (var i = 0; i < w.hours.length && i < count; i++) {
       var h = el('div', 'hour', hours), x = w.hours[i];
       h.style.left = (hw * i) + 'px';
       h.style.width = hw + 'px';
@@ -395,11 +459,13 @@
       el('div', 'd', h, Data.degrees(x.temp));
     }
     var sun = el('div', 'sun', card);
-    if (w.sunrise) { var a = el('span', '', sun); sym('sunrise', a); a.appendChild(document.createTextNode(trf('Sunrise {time}', {time: Data.time(w.sunrise)}))); }
-    if (w.sunset) { var b = el('span', '', sun); sym('sunset', b); b.appendChild(document.createTextNode(trf('Sunset {time}', {time: Data.time(w.sunset)}))); }
+    if (w.sunrise) { var a = el('span', '', sun); sym('sunrise', a); a.appendChild(document.createTextNode(narrow ? Data.time(w.sunrise) : trf('Sunrise {time}', {time: Data.time(w.sunrise)}))); }
+    if (w.sunset) { var b = el('span', '', sun); sym('sunset', b); b.appendChild(document.createTextNode(narrow ? Data.time(w.sunset) : trf('Sunset {time}', {time: Data.time(w.sunset)}))); }
   }
 
   function renderPrices(card, coins) {
+    var narrow = parseFloat(card.style.width) < 600;
+    if (narrow) card.className += ' narrow';
     el('div', 'head', card, tr('Crypto'));
     var stale = Data.staleness(Data.pricesAt, 5 * 60000);
     el('div', 'side', card, stale ? trf('quotes|{ago}', {ago: stale}) : tr('24h change'));
@@ -407,7 +473,7 @@
       var i = coins[j], row = el('div', 'coin', card);
       row.style.top = (86 + 52 * j) + 'px';
       coin(i, row);
-      el('span', 'n', row, Data.coinName(i));
+      el('span', 'n', row, narrow ? ['BTC', 'ETH', 'SOL', 'USD'][i] : Data.coinName(i));
       el('span', 'p', row, Data.money(Data.prices[i]));
       var ch = Data.changes[i];
       if (!isNaN(ch)) el('span', 'c ' + (ch >= 0 ? 'up' : 'down'), row, Data.change(ch));
@@ -420,11 +486,13 @@
     st.zone = Z.DRAWER;
     st.drawer = Math.min(drawerItems.length - 1, nearest(document.querySelectorAll('#drawer .key'), centerX(tiles[st.shelf])));
     updateFocus();
+    startSystem();
   }
 
   function closeDrawer() {
     var keys = document.querySelectorAll('#drawer .key');
     st.zone = Z.SHELF;
+    stopSystem();
     if (shelf.length) st.shelf = nearest($('tiles').children, centerX(keys[st.drawer]));
     updateFocus();
   }
@@ -478,6 +546,8 @@
         step: function (d) { cycle('theme', ['auto', 'light', 'dark'], theme, d); checkNight(); }},
       {label: tr('Weather widget'), toggle: Prefs.weather(),
         step: function () { Prefs.set('weather', !Prefs.weather()); renderPanels(); }},
+      {label: tr('System widget'), toggle: Prefs.system(),
+        step: function () { Prefs.set('system', !Prefs.system()); renderPanels(); }},
       {label: tr('Quotes widget'), toggle: Prefs.quotes(),
         step: function () { Prefs.set('quotes', !Prefs.quotes()); Data.settingsChanged(); }}
     ];
@@ -952,6 +1022,7 @@
     renderClock();
     checkNight();
     Data.refresh();
+    if (st.zone !== Z.DRAWER) stopSystem();
     if (!saverOn && !sheetOpen() && Date.now() - idleAt > SAVER_AFTER) showSaver();
     if (saverOn) tickSaverClock($('saver').querySelector('.clock'));
   }, 30000);
