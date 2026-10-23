@@ -517,7 +517,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #saver .pal { position: absolute; width: 180px; height: 150px; pointer-events: none; }
 #saver .pal .rot { width: 100%; height: 100%; }
 #saver .pal .in { width: 100%; height: 100%; -webkit-transform: translateY(170px); transform: translateY(170px); -webkit-transition: -webkit-transform 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.25), opacity 0.6s; transition: transform 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.25), opacity 0.6s; }
-#saver .pal .eyes { -webkit-transition: -webkit-transform 0.3s ease-out; transition: transform 0.3s ease-out; }
+#saver .pal .eyes { -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%; -webkit-transition: -webkit-transform 0.55s cubic-bezier(0.3, 0.8, 0.3, 1); transition: transform 0.55s cubic-bezier(0.3, 0.8, 0.3, 1); }
 #saver .pal .ear.l { -webkit-transform-origin: 25px 22px; transform-origin: 25px 22px; -webkit-animation: palflick 5s ease-in-out infinite; animation: palflick 5s ease-in-out infinite; }
 #saver .pal .ear.r { -webkit-transform-origin: 95px 22px; transform-origin: 95px 22px; -webkit-animation: palflick 7s ease-in-out 1.5s infinite; animation: palflick 7s ease-in-out 1.5s infinite; }
 #saver .pal .blink { -webkit-transform-origin: 60px 44px; transform-origin: 60px 44px; -webkit-animation: palblink 3.6s infinite; animation: palblink 3.6s infinite; }
@@ -528,6 +528,19 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 /* The clock bounces around the screen (script); the kitten runs after it and tries to catch it. */
 #saver .clock { position: absolute; left: 0; top: 0; color: #FFF; text-align: left; white-space: nowrap; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.55); will-change: transform; }
+/* The cats: cut-out photos. They breathe, rock as they walk, pop in with a ring of light, and cast a soft shadow. */
+#saver .pal .shadow { position: absolute; left: 6%; right: 6%; bottom: -14px; height: 30px; border-radius: 50%; opacity: 0; -webkit-transition: opacity 0.4s; transition: opacity 0.4s; background: -webkit-radial-gradient(center, ellipse, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0) 70%); background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0) 70%); }
+#saver .pal.chase .shadow { opacity: 1; }
+#saver .pal .rot { position: relative; z-index: 1; }
+#saver .pal .swap { width: 100%; height: 100%; -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%; -webkit-transition: opacity 0.24s ease, -webkit-transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1); transition: opacity 0.24s ease, transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1); }
+#saver .pal .flip { position: relative; width: 100%; height: 100%; -webkit-transition: -webkit-transform 0.35s ease; transition: transform 0.35s ease; }
+#saver .pal .pic { display: block; width: 100%; height: 100%; -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%; -webkit-animation: palbreathe 3.4s ease-in-out infinite alternate; animation: palbreathe 3.4s ease-in-out infinite alternate; }
+#saver .pal.chase .pic { -webkit-animation: palwalk 0.5s ease-in-out infinite alternate; animation: palwalk 0.5s ease-in-out infinite alternate; }
+#saver .pal.chase.act-sit .pic, #saver .pal.chase.act-swat .pic { -webkit-animation: palbreathe 2.4s ease-in-out infinite alternate; animation: palbreathe 2.4s ease-in-out infinite alternate; }
+@-webkit-keyframes palbreathe { from { -webkit-transform: scale(1, 1) rotate(-0.8deg); } to { -webkit-transform: scale(1.012, 1.03) rotate(0.8deg); } }
+@keyframes palbreathe { from { transform: scale(1, 1) rotate(-0.8deg); } to { transform: scale(1.012, 1.03) rotate(0.8deg); } }
+@-webkit-keyframes palwalk { from { -webkit-transform: rotate(-3.5deg) scale(1, 0.985); } to { -webkit-transform: rotate(3.5deg) scale(1, 1.02); } }
+@keyframes palwalk { from { transform: rotate(-3.5deg) scale(1, 0.985); } to { transform: rotate(3.5deg) scale(1, 1.02); } }
 #saver .pal.chase { will-change: transform; }
 #saver .pal .rot { -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%; }
 #saver .pal.chase .rot { -webkit-animation: palbob 0.55s ease-in-out infinite alternate; animation: palbob 0.55s ease-in-out infinite alternate; }
@@ -537,10 +550,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #saver .pal.chase.act-hop .rot { -webkit-animation: palhop 0.9s ease-in-out 1; animation: palhop 0.9s ease-in-out 1; }
 #saver .pal.chase.act-hop .paw.l { -webkit-animation: none; animation: none; -webkit-transform: rotate(150deg); transform: rotate(150deg); }
 #saver .pal.chase.act-hop .paw.r { -webkit-transform: rotate(-150deg); transform: rotate(-150deg); }
-/* rope: the throwing arm goes up */
-#saver .pal.chase.act-rope .paw.l { -webkit-animation: none; animation: none; -webkit-transform: rotate(125deg); transform: rotate(125deg); }
 /* pounce: stretched out, both paws forward */
-#saver .pal.chase.act-pounce .rot { -webkit-animation: none; animation: none; -webkit-transform: scale(1.15, 0.9); transform: scale(1.15, 0.9); }
+#saver .pal.chase.act-pounce .rot { -webkit-animation: none; animation: none; -webkit-transform: scale(1.06, 0.93); transform: scale(1.06, 0.93); }
 #saver .pal.chase.act-pounce .paw.l { -webkit-animation: none; animation: none; -webkit-transform: rotate(100deg); transform: rotate(100deg); }
 #saver .pal.chase.act-pounce .paw.r { -webkit-transform: rotate(-100deg); transform: rotate(-100deg); }
 /* swat: both paws batting fast */
@@ -548,8 +559,6 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #saver .pal.chase.act-swat .paw.r { -webkit-animation: palswatr 0.35s ease-in-out 0.17s infinite alternate; animation: palswatr 0.35s ease-in-out 0.17s infinite alternate; }
 /* sit: no bobbing */
 #saver .pal.chase.act-sit .rot { -webkit-animation: none; animation: none; }
-#saver .rope { display: none; position: absolute; left: 0; top: 0; height: 5px; margin-top: -2px; background: #C9A26B; border-radius: 3px; -webkit-transform-origin: 0 50%; transform-origin: 0 50%; will-change: transform; }
-#saver .rope:after { content: ''; position: absolute; right: -16px; top: -13px; width: 24px; height: 24px; border: 5px solid #C9A26B; border-radius: 50%; }
 @-webkit-keyframes palbob { from { -webkit-transform: translateY(0); } to { -webkit-transform: translateY(-7px); } }
 @keyframes palbob { from { transform: translateY(0); } to { transform: translateY(-7px); } }
 @-webkit-keyframes palhop { 0% { -webkit-transform: translateY(0) scale(1, 1); } 20% { -webkit-transform: translateY(0) scale(1.1, 0.86); } 55% { -webkit-transform: translateY(-140px) scale(0.96, 1.08); } 100% { -webkit-transform: translateY(0) scale(1, 1); } }
@@ -560,7 +569,46 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 @-webkit-keyframes palswatr { from { -webkit-transform: rotate(-10deg); } to { -webkit-transform: rotate(-110deg); } }
 @keyframes palswatr { from { transform: rotate(-10deg); } to { transform: rotate(-110deg); } }
 @keyframes palswat { from { transform: rotate(10deg); } to { transform: rotate(110deg); } }
-#saver .clock .time { font-size: 150px; font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
+/* More life: running, stretching, napping with zzz, dust, hearts, a friend that trails behind, a glow in the cat's colour. */
+#saver .pal.chase.run .pic { -webkit-animation: palwalk 0.3s ease-in-out infinite alternate; animation: palwalk 0.3s ease-in-out infinite alternate; }
+#saver .pal.chase.run .rot { -webkit-animation-duration: 0.3s; animation-duration: 0.3s; }
+#saver .pal.chase.act-hop .shadow { -webkit-animation: palhopshadow 0.9s ease-in-out 1; animation: palhopshadow 0.9s ease-in-out 1; }
+#saver .pal.chase.act-stretch .pic { -webkit-animation: palstretch 1.4s ease-in-out 1; animation: palstretch 1.4s ease-in-out 1; }
+#saver .pal.chase.act-nap .pic { -webkit-animation: palnap 2.6s ease-in-out infinite alternate; animation: palnap 2.6s ease-in-out infinite alternate; }
+#saver .pal.chase.act-nap .rot { -webkit-animation: none; animation: none; }
+#saver .pal .zzz { display: none; position: absolute; right: 2%; top: 0; width: 80px; height: 80px; }
+#saver .pal.act-nap .zzz { display: block; }
+#saver .pal .zzz i { position: absolute; left: 0; top: 30px; font-style: normal; font-weight: 700; font-size: 38px; color: #FFF; opacity: 0; -webkit-animation: palzzz 1.9s ease-out infinite; animation: palzzz 1.9s ease-out infinite; }
+#saver .pal .zzz i:nth-child(2) { left: 18px; font-size: 48px; -webkit-animation-delay: 0.6s; animation-delay: 0.6s; }
+#saver .pal .zzz i:nth-child(3) { left: 40px; font-size: 58px; -webkit-animation-delay: 1.2s; animation-delay: 1.2s; }
+#saver .pal .dust { position: absolute; bottom: -6px; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%; background: rgba(215, 208, 200, 0.55); opacity: 0.9; -webkit-transform: scale(0.3); transform: scale(0.3); -webkit-transition: -webkit-transform 0.8s ease-out, opacity 0.8s ease-out; transition: transform 0.8s ease-out, opacity 0.8s ease-out; }
+#saver .spk { position: absolute; width: 28px; height: 26px; margin: -13px 0 0 -14px; opacity: 1; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'><path fill='%23FF5C8A' d='M12 21s-9-6.2-9-12.2C3 5.2 5.4 3 8.2 3c1.6 0 2.9.8 3.8 2.1C12.9 3.8 14.2 3 15.8 3 18.6 3 21 5.2 21 8.8 21 14.8 12 21 12 21z'/></svg>") center / contain no-repeat; -webkit-transition: -webkit-transform 1.2s ease-out, opacity 1.2s ease-in; transition: transform 1.2s ease-out, opacity 1.2s ease-in; will-change: transform; pointer-events: none; }
+#saver .spk.s { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23FFD76A' d='M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z'/></svg>"); }
+#saver .buddy { position: absolute; left: 0; top: 0; opacity: 0; -webkit-transition: opacity 0.35s; transition: opacity 0.35s; will-change: transform; pointer-events: none; }
+#saver .buddy .bob { width: 100%; height: 100%; -webkit-animation: palbob 0.5s ease-in-out infinite alternate; animation: palbob 0.5s ease-in-out infinite alternate; }
+#saver .buddy .bflip { width: 100%; height: 100%; -webkit-transition: -webkit-transform 0.35s ease; transition: transform 0.35s ease; }
+#saver .buddy .bpic { display: block; width: 100%; height: 100%; -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%; -webkit-animation: palwalk 0.42s ease-in-out 0.15s infinite alternate; animation: palwalk 0.42s ease-in-out 0.15s infinite alternate; }
+#saver .tint { position: absolute; left: 0; top: 0; width: 1100px; height: 1100px; border-radius: 50%; color: #3A3F66; opacity: 0.3; pointer-events: none; will-change: transform; background: -webkit-radial-gradient(center, circle, currentColor 0%, rgba(0, 0, 0, 0) 62%); background: radial-gradient(circle, currentColor 0%, rgba(0, 0, 0, 0) 62%); -webkit-transition: color 1.6s ease, opacity 1s ease; transition: color 1.6s ease, opacity 1s ease; }
+#saver .clock { -webkit-transition: text-shadow 1.4s ease; transition: text-shadow 1.4s ease; }
+#saver .fps { display: none; position: absolute; right: 30px; top: 24px; padding: 6px 14px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #8F8; font: 600 28px/1.2 monospace; }
+#saver .fps.on { display: block; }
+/* low-power mode (the TV can't keep 40 fps): no glow, friend, hearts, dust or breathing */
+#saver .poof { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; opacity: 0.9; pointer-events: none; -webkit-transform: scale(0.4); transform: scale(0.4); background: -webkit-radial-gradient(center, circle, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0) 70%); background: radial-gradient(circle, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0) 70%); -webkit-transition: -webkit-transform 0.75s ease-out, opacity 0.75s ease-out; transition: transform 0.75s ease-out, opacity 0.75s ease-out; }
+#saver .pal.chase.land .rot { -webkit-animation: palland 1.2s ease-out 1; animation: palland 1.2s ease-out 1; }
+@-webkit-keyframes palland { 0% { -webkit-transform: scale(0.94, 1.1); } 60% { -webkit-transform: scale(0.94, 1.1); } 78% { -webkit-transform: scale(1.14, 0.84); } 100% { -webkit-transform: scale(1, 1); } }
+@keyframes palland { 0% { transform: scale(0.94, 1.1); } 60% { transform: scale(0.94, 1.1); } 78% { transform: scale(1.14, 0.84); } 100% { transform: scale(1, 1); } }
+#saver.lite .tint, #saver.lite .buddy, #saver.lite .spk, #saver.lite .dust, #saver.lite .poof { display: none; }
+#saver.lite .aurora i { -webkit-animation: none; animation: none; }
+#saver.lite .pal .pic { -webkit-animation: none; animation: none; }
+@-webkit-keyframes palhopshadow { 0% { -webkit-transform: scale(1, 1); opacity: 1; } 55% { -webkit-transform: scale(0.55, 0.55); opacity: 0.45; } 100% { -webkit-transform: scale(1, 1); opacity: 1; } }
+@keyframes palhopshadow { 0% { transform: scale(1, 1); opacity: 1; } 55% { transform: scale(0.55, 0.55); opacity: 0.45; } 100% { transform: scale(1, 1); opacity: 1; } }
+@-webkit-keyframes palstretch { 0% { -webkit-transform: scale(1, 1); } 40% { -webkit-transform: scale(0.94, 1.13); } 70% { -webkit-transform: scale(1.05, 0.92); } 100% { -webkit-transform: scale(1, 1); } }
+@keyframes palstretch { 0% { transform: scale(1, 1); } 40% { transform: scale(0.94, 1.13); } 70% { transform: scale(1.05, 0.92); } 100% { transform: scale(1, 1); } }
+@-webkit-keyframes palnap { from { -webkit-transform: scale(1.02, 0.93) rotate(2deg); } to { -webkit-transform: scale(1, 0.97) rotate(3deg); } }
+@keyframes palnap { from { transform: scale(1.02, 0.93) rotate(2deg); } to { transform: scale(1, 0.97) rotate(3deg); } }
+@-webkit-keyframes palzzz { 0% { opacity: 0; -webkit-transform: translate(0, 0) scale(0.6); } 20% { opacity: 0.9; } 100% { opacity: 0; -webkit-transform: translate(26px, -90px) scale(1.2); } }
+@keyframes palzzz { 0% { opacity: 0; transform: translate(0, 0) scale(0.6); } 20% { opacity: 0.9; } 100% { opacity: 0; transform: translate(26px, -90px) scale(1.2); } }
+#saver .clock .time { font-size: 168px; font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
 #saver .clock .date { margin-top: 10px; font-size: 34px; font-weight: 500; color: rgba(255, 255, 255, 0.82); }
 #saver .clock .title { margin-top: 18px; font-size: 26px; font-weight: 500; color: rgba(255, 255, 255, 0.65); }
 
